@@ -1,1 +1,0 @@
-gcc source/main.c source/compiler.c -o bin/main
