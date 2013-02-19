@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 	unsigned bc_len;
 	
 	//const char* code = "(((2+3)*7)-2)/3\n";
-	const char* code = "(number+pig)/lamb\n";
+	const char* code = "(3400+pig)/lamb\n";
 	gen_bytecode(code, strlen(code), &bc, &bc_len, error);
 	return 0;
 }

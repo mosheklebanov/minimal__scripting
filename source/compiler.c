@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h> //debug only
 #include "compiler.h"
 #include "bytecode_constants.h"
@@ -48,8 +49,6 @@ Manages depth ordering, order of operations, etc...
  from the bytecode generating function
 */
 #define TOKEN_SORT_DETERMINANT(tkn) ((((tkn).depth)<<3) + OPERATOR_ORDER(src[tkn.chr_pos]))
-
-
 
 /*
 SPECIAL MACROS
@@ -112,13 +111,19 @@ The following variables MUST be avaliable in the local scope of the calling func
 #define GET_NEXT_OBJECT_FROM_BEG() do { \
 	current_obj_start = chr; \
 	for(current_obj_end = chr; IS_VALID_NAME_CHAR(src[current_obj_end]); current_obj_end++) {} \
+	current_obj_end--; \
 } while(0)
 
 #define GET_NEXT_OBJECT_FROM_END() do { \
 	current_obj_end = chr; \
 	for(current_obj_start = chr; IS_VALID_NAME_CHAR(src[current_obj_start]); current_obj_start--) {} \
+	current_obj_start++; \
 } while(0)
-	
+
+#define IS_NUMERIC() (atof(src+current_obj_start)!=0 || (memcmp(src+current_obj_start,"0",1)==0) || (memcmp(src+current_obj_start,"0.0",3)==0))
+#define IS_STRING_LITERAL() ((src[current_obj_start]==34 && src[current_obj_end-1]==34)||(src[current_obj_start]==39 && src[current_obj_end-1]==39))
+
+
 
 //credits: http://www.cse.yorku.ca/~oz/hash.html
 unsigned long hash(char* s, unsigned len)
@@ -168,10 +173,15 @@ void gen_bytecode(const char* src, unsigned src_len, void** out_ptr, unsigned* o
 			printf("Token\nchr_pos %d\ndepth %d\nletter %c\n",tokens[i].chr_pos,tokens[i].depth, src[tokens[i].chr_pos]);
 			chr = tokens[i].chr_pos + 1;
 			GET_NEXT_OBJECT_FROM_BEG();
-			printf("Follows: %d\n\n",current_obj_end - current_obj_start);
+			printf("Follows: %d",current_obj_end - current_obj_start);
+			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
+			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
+			
 			chr = tokens[i].chr_pos - 1;
 			GET_NEXT_OBJECT_FROM_END();
-			printf("Precedes: %d\n\n",current_obj_end - current_obj_start);
+			printf("Precedes: %d",current_obj_end - current_obj_start);
+			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
+			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
 		}
 		
 	//}
