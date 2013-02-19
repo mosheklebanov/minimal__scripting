@@ -1,11 +1,21 @@
+#include <stdlib.h>
+#include <stdio.h> //debug only
 #include "compiler.h"
+#include "uthash/uthash.h"
+
+/*
+Constant ALLOC_BLOCK_SIZE
+The bytecode buffer will repeatedly malloc() and realloc() data in 'blocks' at a time
+Increasing this constant will result is fewer allocations and potential copies, but possibly more wasted memory
+*/
+#define ALLOC_BLOCK_SIZE 256
 
 /*
 Token definition and typedef
 Tokens will be gathered for each statement, then evaluated in descending order of depth
 */
 #define TOKEN_QUANTITY_PER_STMT 24
-typedef struct token_t /* by reference */
+typedef struct token_t /* by value */
 {
 	unsigned chr_pos;
 	unsigned depth;
@@ -24,6 +34,14 @@ OPERATOR MACROS
 */
 #define IS_ARITHMETIC_OPERATOR(n) ((n)=='+'||(n)=='-'||(n)=='*'||(n)=='/')
 #define IS_OPERATOR(n) (IS_ARITHMETIC_OPERATOR(n))
+#define OPERATOR_ORDER(n) ((((n)=='*')||((n)=='/'))?2:((((n)=='+')||((n)=='-'))?1:0))
+
+/*
+Manages depth ordering, order of operations, etc...
+`chr* src` is necessary here also - likely that this should be inherited
+ from the bytecode generating function
+*/
+#define TOKEN_SORT_DETERMINANT(tkn) ((((tkn).depth)<<3) + OPERATOR_ORDER(src[tkn.chr_pos]))
 
 /*
 SPECIAL MACROS
@@ -72,7 +90,7 @@ The following variables MUST be avaliable in the local scope of the calling func
 	unsigned i=0; \
 	for (;i<(token_quantity-1); i++) \
 	{ \
-		if (tokens[i].depth<tokens[i+1].depth) \
+		if (TOKEN_SORT_DETERMINANT(tokens[i])<TOKEN_SORT_DETERMINANT(tokens[i+1])) \
 		{ \
 			t = tokens[i]; \
 			tokens[i] = tokens[i+1]; \
@@ -94,27 +112,40 @@ unsigned long hash(char* s, unsigned len)
 
 /*
 The main entry to the compiler
-Responsible for generating bytecode from a buffer
-Will call the CALLBACK function with necessary bytes to be written to file, 
-executed directly, etc..
-Requires a bidirectional access to the input
+Responsible for generating bytecode from a char buffer
+The out pointer will be initialized to an internal memory buffer; this will be accessible to the caller after
+the function returns; must be free()-d later on to prevent memory leaks
+Any compilation requires a bidirectional access to the input
 */
 
 /*
 Note: this function may be called several times during the parsing procedure,
 as long as (entire) evaluates to false
 */
-void gen_bytecode(const char* src, unsigned src_len, int entire, CALLBACK cb, ERROR err)
+
+/*
+Note: ERROR_CALLBACK will be called when an error results from the compiling procudure.
+Is it guaranteed that the error_msg will be non-NULL - the text in error_msg does not need to be freed
+*/
+void gen_bytecode(const char* src, unsigned src_len, int entire, void** out_ptr, unsigned* out_len, ERROR_CALLBACK err)
 {
+	*out_ptr = malloc(ALLOC_BLOCK_SIZE);
+	*out_len = 0;
 	unsigned chr = 0;
 	unsigned line = 1;
 	unsigned traversal_depth = 0;
 	unsigned token_quantity = 0;
 	TOKEN tokens[TOKEN_QUANTITY_PER_STMT];
-	while (1)
-	{
-		MOVE_NEXT_LINE();
+	//while (1)
+	//{
+		printf("Source length %d\n", src_len);
 		GATHER_TOKENS();
+		printf("Token quantity %d\n", token_quantity);
 		SORT_TOKENS();
-	}
+		int i;
+		for (i=0;i<token_quantity;i++)
+		{
+			printf("Token\nchr_pos %d\ndepth %d\n\n",tokens[i].chr_pos,tokens[i].depth);
+		}
+	//}
 }
