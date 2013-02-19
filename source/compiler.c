@@ -139,15 +139,10 @@ Any compilation requires a bidirectional access to the input
 */
 
 /*
-Note: this function may be called several times during the parsing procedure,
-as long as (entire) evaluates to false
-*/
-
-/*
 Note: ERROR_CALLBACK will be called when an error results from the compiling procudure.
 Is it guaranteed that the error_msg will be non-NULL - the text in error_msg does not need to be freed
 */
-void gen_bytecode(const char* src, unsigned src_len, int entire, void** out_ptr, unsigned* out_len, ERROR_CALLBACK err)
+void gen_bytecode(const char* src, unsigned src_len, void** out_ptr, unsigned* out_len, ERROR_CALLBACK err)
 {
 	void* out_buffer = *out_ptr;
 	out_buffer = malloc(ALLOC_BLOCK_SIZE);
