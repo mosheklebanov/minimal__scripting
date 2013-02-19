@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h> //debug only
 #include "compiler.h"
+#include "bytecode_constants.h"
 #include "uthash/uthash.h"
 
 /*
@@ -37,11 +38,18 @@ OPERATOR MACROS
 #define OPERATOR_ORDER(n) ((((n)=='*')||((n)=='/'))?2:((((n)=='+')||((n)=='-'))?1:0))
 
 /*
+Denotes whether a character is valid for a variable OR number
+*/
+#define IS_VALID_NAME_CHAR(n) (!IS_OPERATOR(n) && (n)!=NEWL && (n)!='(' && (n)!=')')
+
+/*
 Manages depth ordering, order of operations, etc...
 `chr* src` is necessary here also - likely that this should be inherited
  from the bytecode generating function
 */
 #define TOKEN_SORT_DETERMINANT(tkn) ((((tkn).depth)<<3) + OPERATOR_ORDER(src[tkn.chr_pos]))
+
+
 
 /*
 SPECIAL MACROS
@@ -49,13 +57,15 @@ Reponsible for parsing input - inlined for speed and easy access to variables in
 Simplifies access to the parsing mechanism
 
 The following variables MUST be avaliable in the local scope of the calling function:
-	int (*cb)(void*, unsigned);
+	const char* src;
 	void (*err)(unsigned, unsigned, const char*);
 	unsigned chr;
 	unsigned line;
 	unsigned traversal_depth;
 	unsigned token_quantity;
 	TOKEN tokens[n];
+	unsigned current_obj_start;
+	unsigned current_obj_end;
 	
 */
 #define MOVE_NEXT_LINE() do { \
@@ -98,6 +108,16 @@ The following variables MUST be avaliable in the local scope of the calling func
 		} \
 	} \
 } while(0)
+
+#define GET_NEXT_OBJECT_FROM_BEG() do { \
+	current_obj_start = chr; \
+	for(current_obj_end = chr; IS_VALID_NAME_CHAR(src[current_obj_end]); current_obj_end++) {} \
+} while(0)
+
+#define GET_NEXT_OBJECT_FROM_END() do { \
+	current_obj_end = chr; \
+	for(current_obj_start = chr; IS_VALID_NAME_CHAR(src[current_obj_start]); current_obj_start--) {} \
+} while(0)
 	
 
 //credits: http://www.cse.yorku.ca/~oz/hash.html
@@ -129,13 +149,18 @@ Is it guaranteed that the error_msg will be non-NULL - the text in error_msg doe
 */
 void gen_bytecode(const char* src, unsigned src_len, int entire, void** out_ptr, unsigned* out_len, ERROR_CALLBACK err)
 {
-	*out_ptr = malloc(ALLOC_BLOCK_SIZE);
+	void* out_buffer = *out_ptr;
+	out_buffer = malloc(ALLOC_BLOCK_SIZE);
+	
 	*out_len = 0;
 	unsigned chr = 0;
 	unsigned line = 1;
 	unsigned traversal_depth = 0;
 	unsigned token_quantity = 0;
 	TOKEN tokens[TOKEN_QUANTITY_PER_STMT];
+	
+	unsigned current_obj_start;
+	unsigned current_obj_end;
 	//while (1)
 	//{
 		printf("Source length %d\n", src_len);
@@ -145,7 +170,14 @@ void gen_bytecode(const char* src, unsigned src_len, int entire, void** out_ptr,
 		int i;
 		for (i=0;i<token_quantity;i++)
 		{
-			printf("Token\nchr_pos %d\ndepth %d\n\n",tokens[i].chr_pos,tokens[i].depth);
+			printf("Token\nchr_pos %d\ndepth %d\nletter %c\n",tokens[i].chr_pos,tokens[i].depth, src[tokens[i].chr_pos]);
+			chr = tokens[i].chr_pos + 1;
+			GET_NEXT_OBJECT_FROM_BEG();
+			printf("Follows: %d\n\n",current_obj_end - current_obj_start);
+			chr = tokens[i].chr_pos - 1;
+			GET_NEXT_OBJECT_FROM_END();
+			printf("Precedes: %d\n\n",current_obj_end - current_obj_start);
 		}
+		
 	//}
 }

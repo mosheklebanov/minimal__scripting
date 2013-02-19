@@ -13,7 +13,8 @@ int main(int argc, char** argv)
 	void* bc;
 	unsigned bc_len;
 	
-	const char* code = "2+(1+1)*3\n";
+	//const char* code = "(((2+3)*7)-2)/3\n";
+	const char* code = "(number+pig)/lamb\n";
 	gen_bytecode(code, strlen(code), 1, &bc, &bc_len, error);
 	return 0;
 }
