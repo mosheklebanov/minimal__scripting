@@ -121,7 +121,7 @@ The following variables MUST be avaliable in the local scope of the calling func
 } while(0)
 
 #define IS_NUMERIC() (atof(src+current_obj_start)!=0 || (memcmp(src+current_obj_start,"0",1)==0) || (memcmp(src+current_obj_start,"0.0",3)==0))
-#define IS_STRING_LITERAL() ((src[current_obj_start]==34 && src[current_obj_end-1]==34)||(src[current_obj_start]==39 && src[current_obj_end-1]==39))
+#define IS_STRING_LITERAL() ((src[current_obj_start]==34 && src[current_obj_end-1]==34) || (src[current_obj_start]==39 && src[current_obj_end-1]==39))
 
 
 
@@ -147,12 +147,10 @@ Any compilation requires a bidirectional access to the input
 Note: ERROR_CALLBACK will be called when an error results from the compiling procudure.
 Is it guaranteed that the error_msg will be non-NULL - the text in error_msg does not need to be freed
 */
-void gen_bytecode(const char* src, unsigned src_len, void** out_ptr, unsigned* out_len, ERROR_CALLBACK err)
+void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, ERROR_CALLBACK err)
 {
-	void* out_buffer = *out_ptr;
-	out_buffer = malloc(ALLOC_BLOCK_SIZE);
-	
-	*out_len = 0;
+	if (!(memory->ptr))
+		memory->ptr = malloc(ALLOC_BLOCK_SIZE);
 	unsigned chr = 0;
 	unsigned line = 1;
 	unsigned traversal_depth = 0;

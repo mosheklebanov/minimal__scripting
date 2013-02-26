@@ -12,4 +12,7 @@
 #define MUL	0x07
 #define DIV	0x08
 
+#define BL_IF	0x09
+#define BL_LOOP	0x10
+
 #endif
