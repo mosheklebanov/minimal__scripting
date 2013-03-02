@@ -135,6 +135,24 @@ uint32_t hash(const char* s, unsigned start, unsigned end)
 	return hashval;
 }
 
+//Converts a 4-byte float into a 4-byte uint32_t without data loss
+uint32_t fromfloat(float f)
+{ return  *(uint32_t*) &f; }
+
+#define WRITE_BYTE1(memory, e) do { *(char*)(memory->ptr + (memory->size++)) = e; } while(0)
+#define WRITE_BYTE2(memory, e) do { WRITE_BYTE1(memory, e>>8); WRITE_BYTE1(memory, e&0xFF); } while(0);
+#define WRITE_BYTE4(memory, e) do { WRITE_BYTE1(memory, e>>24); WRITE_BYTE1(memory, (e>>16)&0xFF); WRITE_BYTE1(memory, (e>>8)&0xFF); WRITE_BYTE1(memory, e&0xFF); } while(0)
+
+
+/*
+Special PREPARE_WRITE macro
+Ensures there is enough space to write onto the given MEMORY_ALLOCATION
+*/
+#define PREPARE_WRITE(memory, bytestoadd) do { \
+	if (memory->allocated_bytes <= (bytestoadd + memory->size)) \
+		memory->ptr = realloc(memory->ptr,memory->allocated_bytes+ALLOC_BLOCK_SIZE); \
+} while(0)
+
 /*
 The main entry to the compiler
 Responsible for generating bytecode from a char buffer
@@ -151,6 +169,8 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 {
 	if (!(memory->ptr))
 		memory->ptr = malloc(ALLOC_BLOCK_SIZE);
+	memory->allocated_bytes = ALLOC_BLOCK_SIZE;
+	
 	unsigned chr = 0;
 	unsigned line = 1;
 	unsigned traversal_depth = 0;
@@ -168,23 +188,40 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 		int i;
 		for (i=0;i<token_quantity;i++)
 		{
-			printf("Token\nchr_pos %d\ndepth %d\nletter %c\nBC %d\n\n\n",tokens[i].chr_pos,tokens[i].depth, src[tokens[i].chr_pos], ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]));
-			chr = tokens[i].chr_pos + 1;
-			GET_NEXT_OBJECT_FROM_BEG();
-			printf("Follows: %d",current_obj_end - current_obj_start);
-			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
-			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
-			if (!IS_NUMERIC())
-				printf("Hash Value: %d\n", hash(src, current_obj_start, current_obj_end));
+			/*
+			To write floating point constants assumes that sizeof(float)==4, which is generally true
+			*/
+			int8_t command = ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]);
+			uint32_t local_obj[2];
 			
 			chr = tokens[i].chr_pos - 1;
 			GET_NEXT_OBJECT_FROM_END();
-			printf("Precedes: %d",current_obj_end - current_obj_start);
-			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
-			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
-			if (!IS_NUMERIC())
-				printf("Hash Value: %d\n", hash(src, current_obj_start, current_obj_end));
+			if (IS_NUMERIC())
+			{
+				command |= 2;
+				local_obj[0] = fromfloat(atof(src+current_obj_start));
+			}
+			else
+			{
+				local_obj[0] = hash(src, current_obj_start, current_obj_end);
+			}
 			
+			chr = tokens[i].chr_pos + 1;
+			GET_NEXT_OBJECT_FROM_BEG();
+			if (IS_NUMERIC())
+			{
+				command |= 1;
+				local_obj[0] = fromfloat(atof(src+current_obj_start));
+			}
+			else
+			{
+				local_obj[1] = hash(src, current_obj_start, current_obj_end);
+			}
+			
+			PREPARE_WRITE(memory, 9);
+			WRITE_BYTE1(memory, command);
+			WRITE_BYTE4(memory, local_obj[0]);
+			WRITE_BYTE4(memory, local_obj[1]);
 			
 		}
 		

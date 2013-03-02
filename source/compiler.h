@@ -5,6 +5,7 @@ typedef struct memory_allocation_t
 {
 	void* ptr;
 	unsigned size;
+	unsigned allocated_bytes;
 } MEMORY_ALLOCATION;
 
 typedef void (*ERROR_CALLBACK) (unsigned chr, unsigned line, const char* error_msg);
