@@ -1,18 +1,16 @@
 #ifndef _BYTECODE_CONSTANTS
 #define _BYTECODE_CONSTANTS
 
-//should be written to the output as `char`s
-#define BL_END	0x01
-#define ASSIGN	0x02
-#define CALL_F	0x03
-#define CALL_C	0x04
+#define BL_END	0b1111111
+#define BL_LOOP	0b1100000
+#define BL_IF	0b1000000
+#define ASSIGN	0b0000010 //0b000001?
+#define CALL_F	0b0100000
+#define CALL_C	0b0110000
 
-#define ADD	0x05
-#define SUB	0x06
-#define MUL	0x07
-#define DIV	0x08
-
-#define BL_IF	0x09
-#define BL_LOOP	0x10
+#define ADD	0b0010000 //0b001 00??
+#define SUB	0b0010100 //0b001 01??
+#define MUL	0b0011000 //0b001 10??
+#define DIV	0b0011100 //0b001 10??
 
 #endif

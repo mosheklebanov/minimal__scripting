@@ -1,9 +1,9 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h> //debug only
 #include "compiler.h"
 #include "bytecode_constants.h"
-#include "uthash/uthash.h"
 
 /*
 Constant ALLOC_BLOCK_SIZE
@@ -37,6 +37,8 @@ OPERATOR MACROS
 #define IS_ARITHMETIC_OPERATOR(n) ((n)=='+'||(n)=='-'||(n)=='*'||(n)=='/')
 #define IS_OPERATOR(n) (IS_ARITHMETIC_OPERATOR(n))
 #define OPERATOR_ORDER(n) ((((n)=='*')||((n)=='/'))?2:((((n)=='+')||((n)=='-'))?1:0))
+
+#define ARITHMETIC_OPERATOR_BC_ROOT(n) ((n)=='+'?ADD:((n)=='-'?SUB:((n)=='*'?MUL:((n)=='/'?DIV:0))))
 
 /*
 Denotes whether a character is valid for a variable OR number
@@ -121,16 +123,14 @@ The following variables MUST be avaliable in the local scope of the calling func
 } while(0)
 
 #define IS_NUMERIC() (atof(src+current_obj_start)!=0 || (memcmp(src+current_obj_start,"0",1)==0) || (memcmp(src+current_obj_start,"0.0",3)==0))
-#define IS_STRING_LITERAL() ((src[current_obj_start]==34 && src[current_obj_end-1]==34) || (src[current_obj_start]==39 && src[current_obj_end-1]==39))
-
-
+#define IS_STRING_LITERAL() ((src[current_obj_start]==34 && src[current_obj_end]==34) || (src[current_obj_start]==39 && src[current_obj_end]==39))
 
 //credits: http://www.cse.yorku.ca/~oz/hash.html
-unsigned long hash(char* s, unsigned len)
+uint32_t hash(const char* s, unsigned start, unsigned end)
 {
-	unsigned long hashval = 0;
+	uint32_t hashval = 0;
 	unsigned c;
-	for (c=0;c<len;c++)
+	for (c=start;c<=end;c++)
 		hashval = s[c] + (hashval<<6) + (hashval<<16) - hashval;
 	return hashval;
 }
@@ -168,18 +168,24 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 		int i;
 		for (i=0;i<token_quantity;i++)
 		{
-			printf("Token\nchr_pos %d\ndepth %d\nletter %c\n",tokens[i].chr_pos,tokens[i].depth, src[tokens[i].chr_pos]);
+			printf("Token\nchr_pos %d\ndepth %d\nletter %c\nBC %d\n\n\n",tokens[i].chr_pos,tokens[i].depth, src[tokens[i].chr_pos], ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]));
 			chr = tokens[i].chr_pos + 1;
 			GET_NEXT_OBJECT_FROM_BEG();
 			printf("Follows: %d",current_obj_end - current_obj_start);
 			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
 			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
+			if (!IS_NUMERIC())
+				printf("Hash Value: %d\n", hash(src, current_obj_start, current_obj_end));
 			
 			chr = tokens[i].chr_pos - 1;
 			GET_NEXT_OBJECT_FROM_END();
 			printf("Precedes: %d",current_obj_end - current_obj_start);
 			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
 			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
+			if (!IS_NUMERIC())
+				printf("Hash Value: %d\n", hash(src, current_obj_start, current_obj_end));
+			
+			
 		}
 		
 	//}
