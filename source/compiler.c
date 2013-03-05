@@ -5,6 +5,8 @@
 #include "compiler.h"
 #include "bytecode_constants.h"
 
+
+
 /*
 Constant ALLOC_BLOCK_SIZE
 The bytecode buffer will repeatedly malloc() and realloc() data in 'blocks' at a time
@@ -135,22 +137,38 @@ uint32_t hash(const char* s, unsigned start, unsigned end)
 	return hashval;
 }
 
-//Converts a 4-byte float into a 4-byte uint32_t without data loss
-uint32_t fromfloat(float f)
-{ return  *(uint32_t*) &f; }
-
-#define WRITE_BYTE1(memory, e) do { *(char*)(memory->ptr + (memory->size++)) = e; } while(0)
-#define WRITE_BYTE2(memory, e) do { WRITE_BYTE1(memory, e>>8); WRITE_BYTE1(memory, e&0xFF); } while(0);
-#define WRITE_BYTE4(memory, e) do { WRITE_BYTE1(memory, e>>24); WRITE_BYTE1(memory, (e>>16)&0xFF); WRITE_BYTE1(memory, (e>>8)&0xFF); WRITE_BYTE1(memory, e&0xFF); } while(0)
-
-
 /*
-Special PREPARE_WRITE macro
+Special PREPARE_* macros
 Ensures there is enough space to write onto the given MEMORY_ALLOCATION
 */
-#define PREPARE_WRITE(memory, bytestoadd) do { \
-	if (memory->allocated_bytes <= (bytestoadd + memory->size)) \
-		memory->ptr = realloc(memory->ptr,memory->allocated_bytes+ALLOC_BLOCK_SIZE); \
+
+//PREPARE_WRITE_INIT - called to ensure that a MEMORY_ALLOCATION is valid and ready to write to
+#define PREPARE_WRITE_INIT(memory) do { \
+	if (!(memory->writeable)) \
+	{ \
+		memory->cnsts_ptr = malloc(ALLOC_BLOCK_SIZE); \
+		memory->cnsts_ptr_allocd = ALLOC_BLOCK_SIZE; \
+		memory->cllbls_ptr = malloc(ALLOC_BLOCK_SIZE); \
+		memory->cllbls_ptr_allocd = ALLOC_BLOCK_SIZE; \
+		memory->code_ptr = malloc(ALLOC_BLOCK_SIZE); \
+		memory->code_ptr_allocd = ALLOC_BLOCK_SIZE; \
+		memory->writeable = 1;\
+	}\
+} while(0)
+
+#define PREPARE_WRITE_CODE(memory, bytestoadd) do { \
+	if (memory->code_ptr_allocd <= (bytestoadd + memory->code_ptr_size)) \
+		memory->code_ptr = realloc(memory->code_ptr, memory->code_ptr_allocd+ALLOC_BLOCK_SIZE); \
+} while(0)
+
+#define PREPARE_WRITE_CNSTS(memory, bytestoadd) do { \
+	if (memory->cnsts_ptr_allocd <= (bytestoadd + memory->cnsts_ptr_size)) \
+		memory->code_ptr = realloc(memory->cnsts_ptr, memory->cnsts_ptr_allocd+ALLOC_BLOCK_SIZE); \
+} while(0)
+
+#define PREPARE_WRITE_CALLABLE(memory, bytestoadd) do { \
+	if (memory->cllbls_ptr_allocd <= (bytestoadd + memory->cllbls_ptr_size)) \
+		memory->cllbls_ptr = realloc(memory->cllbls_ptr, memory->cllbls_ptr_allocd+ALLOC_BLOCK_SIZE); \
 } while(0)
 
 /*
@@ -167,9 +185,7 @@ Is it guaranteed that the error_msg will be non-NULL - the text in error_msg doe
 */
 void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, ERROR_CALLBACK err)
 {
-	if (!(memory->ptr))
-		memory->ptr = malloc(ALLOC_BLOCK_SIZE);
-	memory->allocated_bytes = ALLOC_BLOCK_SIZE;
+	PREPARE_WRITE_INIT(memory);
 	
 	unsigned chr = 0;
 	unsigned line = 1;
@@ -188,10 +204,7 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 		int i;
 		for (i=0;i<token_quantity;i++)
 		{
-			/*
-			To write floating point constants assumes that sizeof(float)==4, which is generally true
-			*/
-			int8_t command = ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]);
+			int32_t command = ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]);
 			uint32_t local_obj[2];
 			
 			chr = tokens[i].chr_pos - 1;
@@ -199,7 +212,10 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 			if (IS_NUMERIC())
 			{
 				command |= 2;
-				local_obj[0] = fromfloat(atof(src+current_obj_start));
+				PREPARE_WRITE_CNSTS(memory, sizeof(double));
+				*((double*)(memory->cnsts_ptr)+memory->cnsts_ptr_size) = atof(src+current_obj_start);
+				local_obj[0] = memory->cnsts_ptr_size;
+				memory->cnsts_ptr_size +=sizeof(double);
 			}
 			else
 			{
@@ -211,19 +227,32 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 			if (IS_NUMERIC())
 			{
 				command |= 1;
-				local_obj[0] = fromfloat(atof(src+current_obj_start));
+				PREPARE_WRITE_CNSTS(memory, sizeof(double));
+				*((double*)(memory->cnsts_ptr)+memory->cnsts_ptr_size) = atof(src+current_obj_start);
+				local_obj[0] = memory->cnsts_ptr_size;
+				memory->cnsts_ptr_size +=sizeof(double);
 			}
 			else
 			{
 				local_obj[1] = hash(src, current_obj_start, current_obj_end);
 			}
 			
-			PREPARE_WRITE(memory, 9);
-			WRITE_BYTE1(memory, command);
-			WRITE_BYTE4(memory, local_obj[0]);
-			WRITE_BYTE4(memory, local_obj[1]);
+			PREPARE_WRITE_CODE(memory, 12);
+			*(memory->code_ptr+memory->code_ptr_size) = command; //left padded
+			memory->code_ptr_size+=4;
+			*(memory->code_ptr+memory->code_ptr_size) = local_obj[0];
+			memory->code_ptr_size+=4;
+			*(memory->code_ptr+memory->code_ptr_size) = local_obj[1];
+			memory->code_ptr_size+=4;
 			
 		}
 		
 	//}
+}
+
+void free_memory_allocation_internal(MEMORY_ALLOCATION* m)
+{
+	free(m->cnsts_ptr);
+	free(m->cllbls_ptr);
+	free(m->code_ptr);
 }

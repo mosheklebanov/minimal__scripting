@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "compiler.h"
+#include "fileio.h"
 
 void error(unsigned chr, unsigned line, const char* error_msg)
 {
@@ -15,5 +16,7 @@ int main(int argc, char** argv)
 	MEMORY_ALLOCATION m;
 	memset(&m, 0, sizeof(MEMORY_ALLOCATION));
 	gen_bytecode(code, strlen(code), &m, error);
+	
+	printf("Save to file: %d", save_to_file("prog1.bin", &m));
 	return 0;
 }

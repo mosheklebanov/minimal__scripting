@@ -1,0 +1,25 @@
+		for (i=0;i<token_quantity;i++)
+		{
+			int is_preceding_object_numeric;
+			int is_following_object_numeric;
+			printf("Token\nchr_pos %d\ndepth %d\nletter %c\nBC %d\n\n\n",tokens[i].chr_pos,tokens[i].depth, src[tokens[i].chr_pos], ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]));
+			chr = tokens[i].chr_pos + 1;
+			GET_NEXT_OBJECT_FROM_BEG();
+			printf("Follows: %d",current_obj_end - current_obj_start);
+			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
+			is_following_object_numeric = IS_NUMERIC();
+			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
+			if (!IS_NUMERIC())
+				printf("Hash Value: %d\n", hash(src, current_obj_start, current_obj_end));
+			
+			chr = tokens[i].chr_pos - 1;
+			GET_NEXT_OBJECT_FROM_END();
+			printf("Precedes: %d",current_obj_end - current_obj_start);
+			printf("\t%c - %c",src[current_obj_start], src[current_obj_end]);
+			is_preceding_object_numeric = IS_NUMERIC();
+			printf(IS_NUMERIC()?"  Numeric\n\n":"  Non-numeric\n\n");
+			if (!IS_NUMERIC())
+				printf("Hash Value: %d\n", hash(src, current_obj_start, current_obj_end));
+			
+			
+		}
