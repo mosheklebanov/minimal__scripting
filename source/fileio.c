@@ -36,20 +36,27 @@ int save_to_file(const char* filename, MEMORY_ALLOCATION* memory)
 	FILE* f = fopen(filename, "w");
 	if (f==NULL)
 		return -2;
-	if (fwrite(&(memory->cnsts_ptr_size), 4, 1, f)<4)
-		return -1;
-	if (fwrite(memory->cnsts_ptr, memory->cnsts_ptr_size, 1, f) < memory->cnsts_ptr_size)
-		return -1;
 	
+	if (fwrite(&(memory->cnsts_ptr_size), 4, 1, f)<1)
+		return -1;
+	if (memory->cnsts_ptr_size > 0)
+	{
+		if (fwrite(memory->cnsts_ptr, memory->cnsts_ptr_size, 1, f) < 1)
+			return -1;
+	}
 	if (fwrite(&(memory->cllbls_ptr_size), 4, 1, f)<4)
 		return -1;
-	if (fwrite(memory->cllbls_ptr, memory->cllbls_ptr_size, 1, f) < memory->cllbls_ptr_size)
-		return -1;
-	
+	if (memory->cllbls_ptr_size > 0)
+	{
+		if (fwrite(memory->cllbls_ptr, memory->cllbls_ptr_size, 1, f) < 1)
+			return -1;
+	}
 	if (fwrite(&(memory->code_ptr_size), 4, 1, f)<4)
 		return -1;
-	if (fwrite(memory->code_ptr, memory->code_ptr_size, 1, f) < memory->code_ptr_size)
-		return -1;
+	if (memory->code_ptr_size > 0)
+	{
+		if (fwrite(memory->code_ptr, memory->code_ptr_size, 1, f) < 1)
+			return -1;
 	
 	fclose(f);
 	return 0;

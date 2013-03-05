@@ -17,6 +17,11 @@ int main(int argc, char** argv)
 	memset(&m, 0, sizeof(MEMORY_ALLOCATION));
 	gen_bytecode(code, strlen(code), &m, error);
 	
+	printf("cnsts_ptr_size %d\n",m.cnsts_ptr_size);
+	printf("cllbls_ptr_size %d\n",m.cllbls_ptr_size);
+	printf("code_ptr_size %d\n",m.code_ptr_size);
+	
+	
 	printf("Save to file: %d", save_to_file("prog1.bin", &m));
 	return 0;
 }

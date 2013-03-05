@@ -12,7 +12,7 @@ Constant ALLOC_BLOCK_SIZE
 The bytecode buffer will repeatedly malloc() and realloc() data in 'blocks' at a time
 Increasing this constant will result is fewer allocations and potential copies, but possibly more wasted memory
 */
-#define ALLOC_BLOCK_SIZE 256
+#define ALLOC_BLOCK_SIZE 512
 
 /*
 Token definition and typedef
