@@ -1,6 +1,7 @@
 #ifndef _COMPILER
 #define _COMPILER
 #include <stdint.h>
+#include <stdio.h>
 
 typedef struct memory_allocation_t
 {
@@ -18,7 +19,8 @@ typedef struct memory_allocation_t
 
 void free_memory_allocation_internal(MEMORY_ALLOCATION* m);
 
+uint32_t hash(const char* s, unsigned start, unsigned end);
 typedef void (*ERROR_CALLBACK) (unsigned chr, unsigned line, const char* error_msg);
-void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, ERROR_CALLBACK err);
+void gen_bytecode(FILE* in, MEMORY_ALLOCATION* memory, ERROR_CALLBACK err);
 
 #endif

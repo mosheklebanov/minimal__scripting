@@ -80,7 +80,7 @@ The following variables MUST be avaliable in the local scope of the calling func
 #define GATHER_TOKENS() do { \
 	unsigned chr2; \
 	unsigned token_d=0; \
-	for (chr2=chr; chr2<src_len && src[chr2]!=NEWL; chr2++) \
+	for (chr2=chr; src[chr2]!=NEWL; chr2++) \
 	{ \
 		if (IS_OPERATOR(src[chr2])) \
 		{ \
@@ -121,7 +121,7 @@ The following variables MUST be avaliable in the local scope of the calling func
 #define GET_NEXT_OBJECT_FROM_END() do { \
 	current_obj_end = chr; \
 	for(current_obj_start = chr; IS_VALID_NAME_CHAR(src[current_obj_start]); current_obj_start--) {} \
-	current_obj_start++; \
+	current_obj_start++;  \
 } while(0)
 
 #define IS_NUMERIC() (atof(src+current_obj_start)!=0 || (memcmp(src+current_obj_start,"0",1)==0) || (memcmp(src+current_obj_start,"0.0",3)==0))
@@ -183,7 +183,7 @@ Any compilation requires a bidirectional access to the input
 Note: ERROR_CALLBACK will be called when an error results from the compiling procudure.
 Is it guaranteed that the error_msg will be non-NULL - the text in error_msg does not need to be freed
 */
-void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, ERROR_CALLBACK err)
+void gen_bytecode(FILE* in, MEMORY_ALLOCATION* memory, ERROR_CALLBACK err)
 {
 	PREPARE_WRITE_INIT(memory);
 	
@@ -192,23 +192,25 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 	unsigned traversal_depth = 0;
 	unsigned token_quantity = 0;
 	TOKEN tokens[TOKEN_QUANTITY_PER_STMT];
-	
+	char src[256];
 	unsigned current_obj_start;
 	unsigned current_obj_end;
-	//while (1)
-	//{
-		printf("Source length %d\n", src_len);
+	while (fgets(src, 255, in))
+	{
+		printf("[%s]",src);
 		GATHER_TOKENS();
 		printf("Token quantity %d\n", token_quantity);
 		SORT_TOKENS();
+		
 		int i;
 		for (i=0;i<token_quantity;i++)
 		{
 			int32_t command = ARITHMETIC_OPERATOR_BC_ROOT(src[tokens[i].chr_pos]);
 			uint32_t local_obj[2];
 			
-			chr = tokens[i].chr_pos - 1;
+			//chr = tokens[i].chr_pos - 1;
 			GET_NEXT_OBJECT_FROM_END();
+			printf("Object %c - %c\n", src[current_obj_start], src[current_obj_end]);
 			if (IS_NUMERIC())
 			{
 				command |= 2;
@@ -224,6 +226,7 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 			
 			chr = tokens[i].chr_pos + 1;
 			GET_NEXT_OBJECT_FROM_BEG();
+			printf("Object %c - %c\n", src[current_obj_start], src[current_obj_end]);
 			if (IS_NUMERIC())
 			{
 				command |= 1;
@@ -247,7 +250,7 @@ void gen_bytecode(const char* src, unsigned src_len, MEMORY_ALLOCATION* memory, 
 			
 		}
 		
-	//}
+	}
 }
 
 void free_memory_allocation_internal(MEMORY_ALLOCATION* m)

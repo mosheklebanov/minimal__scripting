@@ -11,17 +11,26 @@ void error(unsigned chr, unsigned line, const char* error_msg)
 
 int main(int argc, char** argv)
 {
-	//const char* code = "(((2+3)*7)-2)/3\n";
-	const char* code = "1+2\n";
-	MEMORY_ALLOCATION m;
-	memset(&m, 0, sizeof(MEMORY_ALLOCATION));
-	gen_bytecode(code, strlen(code), &m, error);
-	
-	printf("cnsts_ptr_size %d\n",m.cnsts_ptr_size);
-	printf("cllbls_ptr_size %d\n",m.cllbls_ptr_size);
-	printf("code_ptr_size %d\n",m.code_ptr_size);
-	
-	
-	printf("Save to file: %d", save_to_file("prog1.bin", &m));
+	if (argc<3)
+	{
+		printf("-----Invalid number of arguments-----\n\nUsage:\n\t%s compile <filename> - compiles a script to bytecode\n\t%s exec(ute) <filename> - executes the script directly\n\t%s hash <string>  - uses the native hashing function and returns the result",argv[0],argv[0],argv[0]);
+	}
+	else if (strcmp(argv[1],"compile")==0)
+	{
+		MEMORY_ALLOCATION m;
+		FILE* f = fopen(argv[2],"r");
+		if (f)
+			gen_bytecode(f, &m, error);
+		else
+			error(0,0,"File cannot be opened");
+	}
+	else if (strcmp(argv[1],"exec")==0 || strcmp(argv[1],"execute")==0)
+	{
+		// executes the file
+	}
+	else if (strcmp(argv[1],"hash")==0)
+	{
+		printf("\n\"%s\" => %x\n", argv[2], hash(argv[2], 0, strlen(argv[2])));
+	}
 	return 0;
 }
